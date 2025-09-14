@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dry Fruit Calculator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            color: #e2e8f0; /* Light text */
+        }
+        .container {
+            max-width: 640px;
+            margin: auto;
+            padding: 1.5rem;
+        }
+        .product-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #2d3748;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .product-info {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
+        .product-info img {
+            border-radius: 0.5rem;
+        }
+        .product-details {
+            margin-left: 1rem;
+        }
+        .quantity-control input {
+            background-color: #4a5568;
+            border: 1px solid #718096;
+            color: #e2e8f0;
+            text-align: center;
+            width: 3rem;
+            border-radius: 0.5rem;
+            padding: 0.25rem;
+            -moz-appearance: textfield;
+        }
+        .quantity-control input::-webkit-outer-spin-button,
+        .quantity-control input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .quantity-btn {
+            background-color: #4a5568;
+            color: white;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            line-height: 1;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .quantity-btn:hover {
+            background-color: #6b7280;
+        }
+        .copy-button {
+            background-color: #38b2ac;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .copy-button:hover {
+            background-color: #319795;
+        }
+        #link-container {
+            transition: opacity 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+    <div class="container p-6 md:p-12">
+        <h1 class="text-3xl font-bold text-center mb-8 text-white">Dry Fruit Totalizer</h1>
+        <p class="text-center text-gray-400 mb-6">Select the quantity for each item to compute your total.</p>
+
+        <div id="product-list" class="space-y-4">
+            <!-- Product cards will be generated here by JavaScript -->
+        </div>
+        
+        <div class="mt-8 p-6 bg-gray-800 rounded-xl shadow-md">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-xl font-semibold">Total:</span>
+                <span id="total-amount" class="text-3xl font-bold text-teal-400">₹0</span>
+            </div>
+            
+            <button onclick="calculateTotal()" class="w-full bg-teal-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-teal-700 transition-colors shadow-lg">
+                Calculate Total
+            </button>
+        </div>
+
+        <div id="link-container" class="mt-6 p-6 bg-gray-800 rounded-xl shadow-md hidden opacity-0">
+            <h2 class="text-xl font-semibold mb-3">Your Payment Link</h2>
+            <div class="flex items-center space-x-2 bg-gray-700 p-3 rounded-lg">
+                <input type="text" id="upi-link-input" readonly class="flex-grow bg-transparent border-none outline-none text-sm text-gray-300 truncate cursor-pointer">
+                <button onclick="copyLink()" class="copy-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v10a2 2 0 002 2h2m-2 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-2 2V5m0 0a2 2 0 10-4 0m4 0a2 2 0 11-4 0M8 5a2 2 0 11-4 0m4 0a2 2 0 10-4 0m-2 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+                    </svg>
+                    Copy Link
+                </button>
+            </div>
+            <p id="copy-message" class="text-xs text-center text-green-400 mt-2 hidden">Link copied to clipboard!</p>
+        </div>
+
+    </div>
+
+    <script>
+        const products = [
+            { name: 'Almonds', price: 250, weight: '250 gms', image: 'https://placehold.co/80x80/2f4f4f/ffffff?text=Almonds' },
+            { name: 'Cashews', price: 250, weight: '250 gms', image: 'https://placehold.co/80x80/6b46c1/ffffff?text=Cashews' },
+            { name: 'Pistachios', price: 400, weight: '250 gms', image: 'https://placehold.co/80x80/4a5568/ffffff?text=Pistachios' },
+            { name: 'Walnuts', price: 350, weight: '250 gms', image: 'https://placehold.co/80x80/5a67d8/ffffff?text=Walnuts' },
+            { name: 'Makhana', price: 380, weight: '250 gms', image: 'https://placehold.co/80x80/dd6b20/ffffff?text=Makhana' },
+            { name: 'Anjeer', price: 450, weight: '250 gms', image: 'https://placehold.co/80x80/d69e2e/ffffff?text=Anjeer' },
+            { name: 'Pumpkin Seeds', price: 150, weight: '250 gms', image: 'https://placehold.co/80x80/63b3ed/ffffff?text=Seeds' },
+        ];
+
+        const productListEl = document.getElementById('product-list');
+        const totalAmountEl = document.getElementById('total-amount');
+        const linkContainerEl = document.getElementById('link-container');
+        const upiLinkInput = document.getElementById('upi-link-input');
+        const copyMessageEl = document.getElementById('copy-message');
+
+        // Dynamically create product cards
+        products.forEach((product, index) => {
+            const cardHtml = `
+                <div class="product-card">
+                    <div class="product-info">
+                        <img src="${product.image}" alt="${product.name}" class="w-16 h-16 object-cover">
+                        <div class="product-details">
+                            <span class="text-lg font-medium">${product.name}</span>
+                            <p class="text-gray-400 text-sm">₹${product.price} (${product.weight})</p>
+                        </div>
+                    </div>
+                    <div class="quantity-control flex items-center space-x-2">
+                        <button onclick="decreaseQuantity(${index})" class="quantity-btn">-</button>
+                        <input type="number" id="qty-${index}" value="0" min="0" readonly class="text-lg">
+                        <button onclick="increaseQuantity(${index})" class="quantity-btn">+</button>
+                    </div>
+                </div>
+            `;
+            productListEl.innerHTML += cardHtml;
+        });
+
+        // Function to increase quantity
+        function increaseQuantity(index) {
+            const quantityInput = document.getElementById(`qty-${index}`);
+            quantityInput.value = parseInt(quantityInput.value) + 1;
+            calculateTotal();
+        }
+        
+        // Function to decrease quantity
+        function decreaseQuantity(index) {
+            const quantityInput = document.getElementById(`qty-${index}`);
+            const currentValue = parseInt(quantityInput.value);
+            if (currentValue > 0) {
+                quantityInput.value = currentValue - 1;
+                calculateTotal();
+            }
+        }
+
+        // Main function to calculate the total and generate the link
+        function calculateTotal() {
+            let total = 0;
+            products.forEach((product, index) => {
+                const quantityInput = document.getElementById(`qty-${index}`);
+                const quantity = parseInt(quantityInput.value) || 0;
+                total += quantity * product.price;
+            });
+
+            // Update the total amount displayed
+            totalAmountEl.textContent = `₹${total}`;
+
+            // Generate the UPI link with the total amount
+            const upiLink = `upi://pay?pa=madhu3gupta@okicici&pn=Akansha%20Gupta&am=${total}&tn=Akansha%20Gutpa&cu=INR`;
+            upiLinkInput.value = upiLink;
+
+            // Show the link container
+            linkContainerEl.classList.remove('hidden');
+            setTimeout(() => {
+                linkContainerEl.classList.add('opacity-100');
+            }, 10);
+        }
+
+        // Function to copy the link to the clipboard
+        function copyLink() {
+            upiLinkInput.select();
+            document.execCommand('copy');
+            copyMessageEl.classList.remove('hidden');
+            setTimeout(() => {
+                copyMessageEl.classList.add('hidden');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
