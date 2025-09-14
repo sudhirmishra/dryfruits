@@ -100,9 +100,10 @@
                 <span id="total-amount" class="text-3xl font-bold text-teal-400">₹0</span>
             </div>
             
-            <button onclick="calculateTotal()" class="w-full bg-teal-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-teal-700 transition-colors shadow-lg">
-                Calculate Total
-            </button>
+            <a id="whatsapp-link" href="#" target="_blank" class="w-full bg-teal-600 text-white text-center font-bold py-3 px-6 rounded-lg hover:bg-teal-700 transition-colors shadow-lg block">
+                Share over WhatsApp
+            </a>
+            <p id="share-message" class="text-xs text-center text-green-400 mt-2 hidden"></p>
         </div>
 
         <div id="link-container" class="mt-6 p-6 bg-gray-800 rounded-xl shadow-md hidden opacity-0">
@@ -137,6 +138,8 @@
         const linkContainerEl = document.getElementById('link-container');
         const upiLinkInput = document.getElementById('upi-link-input');
         const copyMessageEl = document.getElementById('copy-message');
+        const shareMessageEl = document.getElementById('share-message');
+        const whatsappLinkEl = document.getElementById('whatsapp-link');
 
         // Dynamically create product cards
         products.forEach((product, index) => {
@@ -164,6 +167,7 @@
             const quantityInput = document.getElementById(`qty-${index}`);
             quantityInput.value = parseInt(quantityInput.value) + 1;
             calculateTotal();
+            updateWhatsAppLink();
         }
         
         // Function to decrease quantity
@@ -173,6 +177,7 @@
             if (currentValue > 0) {
                 quantityInput.value = currentValue - 1;
                 calculateTotal();
+                updateWhatsAppLink();
             }
         }
 
@@ -208,6 +213,40 @@
                 copyMessageEl.classList.add('hidden');
             }, 3000);
         }
+
+        // Function to generate and set the WhatsApp share link
+        function updateWhatsAppLink() {
+            let summaryText = 'My Dry Fruit Order\n\n';
+            let total = 0;
+            let hasItems = false;
+            products.forEach((product, index) => {
+                const quantityInput = document.getElementById(`qty-${index}`);
+                const quantity = parseInt(quantityInput.value) || 0;
+
+                if (quantity > 0) {
+                    hasItems = true;
+                    const itemTotal = quantity * product.price;
+                    total += itemTotal;
+                    summaryText += `${product.name} x ${quantity}: ₹${itemTotal}\n`;
+                }
+            });
+            
+            if (hasItems) {
+                summaryText += `\n---\nGrand Total: ₹${total}\n\n`;
+                summaryText += `UPI Payment Link: ${upiLinkInput.value}`;
+
+                const encodedText = encodeURIComponent(summaryText);
+                whatsappLinkEl.href = `https://wa.me/?text=${encodedText}`;
+                whatsappLinkEl.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                whatsappLinkEl.href = '#';
+                whatsappLinkEl.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // Initial calculation and link update on page load
+        calculateTotal();
+        updateWhatsAppLink();
     </script>
 </body>
 </html>
