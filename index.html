@@ -20,10 +20,9 @@
         }
         .product-card {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            align-items: stretch;
             background-color: #2d3748;
-            padding: 1rem;
+            padding: 0.5rem;
             border-radius: 0.75rem;
             margin-bottom: 0.75rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -149,17 +148,19 @@
         products.forEach((product, index) => {
             const cardHtml = `
                 <div class="product-card">
-                    <div class="product-info">
-                        <img src="${product.image}" alt="${product.name}" class="w-16 h-16 object-cover">
-                        <div class="product-details">
+                    <div onclick="decreaseQuantity(${index})" class="flex-1 flex justify-center items-center bg-gray-700 hover:bg-gray-600 transition-colors rounded-lg mr-2 cursor-pointer p-4">
+                        <span class="text-2xl font-bold">-</span>
+                    </div>
+                    <div class="flex-grow flex items-center p-4">
+                        <img src="${product.image}" alt="${product.name}" class="w-16 h-16 object-cover rounded-lg">
+                        <div class="product-details flex-grow ml-4">
                             <span class="text-lg font-medium">${product.name}</span>
                             <p class="text-gray-400 text-sm">₹${product.price} (${product.weight})</p>
+                            <div class="text-sm mt-1">Quantity: <span id="qty-${index}">0</span></div>
                         </div>
                     </div>
-                    <div class="quantity-control flex items-center space-x-2">
-                        <button onclick="decreaseQuantity(${index})" class="quantity-btn">-</button>
-                        <input type="number" id="qty-${index}" value="0" min="0" readonly class="text-lg">
-                        <button onclick="increaseQuantity(${index})" class="quantity-btn">+</button>
+                    <div onclick="increaseQuantity(${index})" class="flex-1 flex justify-center items-center bg-gray-700 hover:bg-gray-600 transition-colors rounded-lg ml-2 cursor-pointer p-4">
+                        <span class="text-2xl font-bold">+</span>
                     </div>
                 </div>
             `;
@@ -168,18 +169,19 @@
 
         // Function to increase quantity
         function increaseQuantity(index) {
-            const quantityInput = document.getElementById(`qty-${index}`);
-            quantityInput.value = parseInt(quantityInput.value) + 1;
+            const quantitySpan = document.getElementById(`qty-${index}`);
+            let currentValue = parseInt(quantitySpan.textContent);
+            quantitySpan.textContent = currentValue + 1;
             calculateTotal();
             updateWhatsAppLink();
         }
         
         // Function to decrease quantity
         function decreaseQuantity(index) {
-            const quantityInput = document.getElementById(`qty-${index}`);
-            const currentValue = parseInt(quantityInput.value);
+            const quantitySpan = document.getElementById(`qty-${index}`);
+            let currentValue = parseInt(quantitySpan.textContent);
             if (currentValue > 0) {
-                quantityInput.value = currentValue - 1;
+                quantitySpan.textContent = currentValue - 1;
                 calculateTotal();
                 updateWhatsAppLink();
             }
@@ -189,8 +191,8 @@
         function calculateTotal() {
             let total = 0;
             products.forEach((product, index) => {
-                const quantityInput = document.getElementById(`qty-${index}`);
-                const quantity = parseInt(quantityInput.value) || 0;
+                const quantitySpan = document.getElementById(`qty-${index}`);
+                const quantity = parseInt(quantitySpan.textContent) || 0;
                 total += quantity * product.price;
             });
 
@@ -246,8 +248,8 @@
             let total = 0;
             let hasItems = false;
             products.forEach((product, index) => {
-                const quantityInput = document.getElementById(`qty-${index}`);
-                const quantity = parseInt(quantityInput.value) || 0;
+                const quantitySpan = document.getElementById(`qty-${index}`);
+                const quantity = parseInt(quantitySpan.textContent) || 0;
 
                 if (quantity > 0) {
                     hasItems = true;
