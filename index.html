@@ -6,6 +6,7 @@
     <title>Dry Fruit Calculator</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -118,8 +119,10 @@
                 </button>
             </div>
             <p id="copy-message" class="text-xs text-center text-green-400 mt-2 hidden">Link copied to clipboard!</p>
-        </div>
 
+            <h2 class="text-xl font-semibold mt-6 mb-3">Or Scan to Pay</h2>
+            <div id="qr-code-container" class="flex justify-center p-4 bg-white rounded-lg"></div>
+        </div>
     </div>
 
     <script>
@@ -140,6 +143,7 @@
         const copyMessageEl = document.getElementById('copy-message');
         const shareMessageEl = document.getElementById('share-message');
         const whatsappLinkEl = document.getElementById('whatsapp-link');
+        const qrCodeContainerEl = document.getElementById('qr-code-container');
 
         // Dynamically create product cards
         products.forEach((product, index) => {
@@ -197,11 +201,30 @@
             const upiLink = `upi://pay?pa=madhu3gupta@okicici&pn=Akansha%20Gupta&am=${total}&tn=Akansha%20Gutpa&cu=INR`;
             upiLinkInput.value = upiLink;
 
+            // Generate the QR code
+            generateQRCode(upiLink);
+
             // Show the link container
             linkContainerEl.classList.remove('hidden');
             setTimeout(() => {
                 linkContainerEl.classList.add('opacity-100');
             }, 10);
+        }
+
+        // Function to generate the QR code
+        function generateQRCode(data) {
+            // Clear any previous QR code
+            qrCodeContainerEl.innerHTML = '';
+            
+            // Generate the new QR code
+            new QRCode(qrCodeContainerEl, {
+                text: data,
+                width: 128,
+                height: 128,
+                colorDark : "#1a202c",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
         }
 
         // Function to copy the link to the clipboard
