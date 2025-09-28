@@ -73,6 +73,23 @@
             visibility: hidden;
             opacity: 0;
         }
+        /* Flex adjustments for responsive inventory layout */
+        .inventory-control-group {
+            display: flex;
+            align-items: center;
+        }
+        .inventory-card-content {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+        @media (min-width: 768px) {
+            .inventory-card-content {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200">
@@ -87,6 +104,8 @@
                     onclick="switchView('Inventory')">Inventory</button>
             <button class="tab-button flex-1 py-3 text-lg font-medium transition-colors hover:text-teal-400" 
                     onclick="switchView('Reports')">Reports</button>
+            <button class="tab-button flex-1 py-3 text-lg font-medium transition-colors hover:text-teal-400" 
+                    onclick="switchView('Settings')">Settings</button>
         </div>
 
         <div id="app-content" class="mt-6">
@@ -100,17 +119,20 @@
         // --- PWA Setup and LocalStorage Keys ---
         const STORAGE_KEY_INVENTORY = 'dryFruitInventory';
         const STORAGE_KEY_SALES = 'dryFruitSales';
+        const STORAGE_KEY_PRICES = 'dryFruitPrices'; // New Key for custom prices
 
-        // --- Global Product Data ---
-        const products = [
-            { id: 'almonds', name: 'Almonds', price: 250, weight: '250 gms', image: 'https://placehold.co/80x80/2f4f4f/ffffff?text=Almonds' },
-            { id: 'cashews', name: 'Cashews', price: 250, weight: '250 gms', image: 'https://placehold.co/80x80/6b46c1/ffffff?text=Cashews' },
-            { id: 'pistachios', name: 'Pistachios', price: 400, weight: '250 gms', image: 'https://placehold.co/80x80/4a5568/ffffff?text=Pistachios' },
-            { id: 'walnuts', name: 'Walnuts', price: 350, weight: '250 gms', image: 'https://placehold.co/80x80/5a67d8/ffffff?text=Walnuts' },
-            { id: 'makhana', name: 'Makhana', price: 380, weight: '250 gms', image: 'https://placehold.co/80x80/dd6b20/ffffff?text=Makhana' },
-            { id: 'anjeer', name: 'Anjeer', price: 450, weight: '250 gms', image: 'https://placehold.co/80x80/d69e2e/ffffff?text=Anjeer' },
-            { id: 'pumpkin_seeds', name: 'Pumpkin Seeds', price: 150, weight: '250 gms', image: 'https://placehold.co/80x80/63b3ed/ffffff?text=Seeds' },
+        // --- Global Product Data (Default Values) ---
+        const DEFAULT_PRODUCT_DATA = [
+            { id: 'almonds', name: 'Almonds', defaultPrice: 250, weight: '250 gms', image: 'https://placehold.co/80x80/2f4f4f/ffffff?text=Almonds' },
+            { id: 'cashews', name: 'Cashews', defaultPrice: 250, weight: '250 gms', image: 'https://placehold.co/80x80/6b46c1/ffffff?text=Cashews' },
+            { id: 'pistachios', name: 'Pistachios', defaultPrice: 400, weight: '250 gms', image: 'https://placehold.co/80x80/4a5568/ffffff?text=Pistachios' },
+            { id: 'walnuts', name: 'Walnuts', defaultPrice: 350, weight: '250 gms', image: 'https://placehold.co/80x80/5a67d8/ffffff?text=Walnuts' },
+            { id: 'makhana', name: 'Makhana', defaultPrice: 380, weight: '250 gms', image: 'https://placehold.co/80x80/dd6b20/ffffff?text=Makhana' },
+            { id: 'anjeer', name: 'Anjeer', defaultPrice: 450, weight: '250 gms', image: 'https://placehold.co/80x80/d69e2e/ffffff?text=Anjeer' },
+            { id: 'pumpkin_seeds', name: 'Pumpkin Seeds', defaultPrice: 150, weight: '250 gms', image: 'https://placehold.co/80x80/63b3ed/ffffff?text=Seeds' },
         ];
+        
+        let products = []; // This array will hold the current prices and be used throughout the app
 
         // --- Application State ---
         let appState = {
@@ -122,12 +144,12 @@
             upiLink: '',
         };
         
-        // --- LocalStorage Functions (No Server State) ---
+        // --- LocalStorage Functions ---
         function getInventory() {
             try {
                 const inventory = JSON.parse(localStorage.getItem(STORAGE_KEY_INVENTORY) || '{}');
                 // Ensure all products are initialized, defaulting to 0
-                products.forEach(p => {
+                DEFAULT_PRODUCT_DATA.forEach(p => {
                     if (inventory[p.id] === undefined) inventory[p.id] = 0;
                 });
                 return inventory;
@@ -147,6 +169,17 @@
         function saveSales(sales) {
             localStorage.setItem(STORAGE_KEY_SALES, JSON.stringify(sales));
         }
+        
+        // New price persistence functions
+        function getPersistedPrices() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY_PRICES) || '{}');
+            } catch { return {}; }
+        }
+
+        function savePersistedPrices(prices) {
+            localStorage.setItem(STORAGE_KEY_PRICES, JSON.stringify(prices));
+        }
 
         // --- Core Logic ---
 
@@ -155,8 +188,9 @@
             let hasItems = false;
             
             products.forEach(product => {
+                // IMPORTANT: Use the live price from the products array
                 const quantity = appState.orderQuantities[product.id] || 0;
-                total += quantity * product.price;
+                total += quantity * product.price; 
                 if (quantity > 0) hasItems = true;
             });
 
@@ -222,9 +256,10 @@
         window.increaseQuantity = (productId) => {
             const currentOrder = appState.orderQuantities[productId] || 0;
             const currentStock = appState.inventory[productId] || 0;
+            const product = products.find(p => p.id === productId);
             
             if (currentStock === 0 || currentOrder >= currentStock) {
-                showToast(`Cannot add ${products.find(p => p.id === productId).name}. Inventory is 0 or limit reached!`, 'error');
+                showToast(`Cannot add ${product.name}. Inventory is 0 or limit reached!`, 'error');
                 return;
             }
             appState.orderQuantities[productId] = currentOrder + 1;
@@ -244,21 +279,45 @@
         window.updateStock = (productId, delta) => {
             const currentStock = appState.inventory[productId] || 0;
             const newStock = Math.max(0, currentStock + delta);
+            const product = products.find(p => p.id === productId);
             
             appState.inventory[productId] = newStock;
             saveInventory(appState.inventory);
-            showToast(`Stock for ${products.find(p => p.id === productId).name} updated to ${newStock}.`, 'success');
+            showToast(`Stock for ${product.name} updated to ${newStock}.`, 'success');
             renderApp();
         };
-
+        
         window.setStockFromInput = (productId) => {
              const input = document.getElementById(`inventory-input-${productId}`);
              const newStock = parseInt(input.value) || 0;
+             const product = products.find(p => p.id === productId);
+
              appState.inventory[productId] = Math.max(0, newStock);
              saveInventory(appState.inventory);
-             showToast(`Stock for ${products.find(p => p.id === productId).name} set to ${appState.inventory[productId]}.`, 'success');
+             showToast(`Stock for ${product.name} set to ${appState.inventory[productId]}.`, 'success');
              renderApp();
         };
+
+        window.setPriceFromInput = (productId) => {
+             const input = document.getElementById(`price-input-${productId}`);
+             const newPrice = parseInt(input.value) || 0;
+             const product = products.find(p => p.id === productId);
+
+             if (product) {
+                product.price = Math.max(0, newPrice);
+
+                // 1. Persist the new price in Local Storage
+                const persistedPrices = getPersistedPrices();
+                persistedPrices[productId] = product.price;
+                savePersistedPrices(persistedPrices);
+                
+                // 2. Update order state (recalculates total based on new price)
+                updateOrderState(); 
+
+                showToast(`Price for ${product.name} set to ₹${product.price}.`, 'success');
+             }
+        };
+
 
         window.recordSale = () => {
             if (appState.totalAmount === 0) {
@@ -277,7 +336,7 @@
                         id: product.id,
                         name: product.name,
                         quantity: quantitySold,
-                        price: product.price
+                        price: product.price // Use the current price at time of sale
                     });
                     saleTotal += quantitySold * product.price;
                     // Deduct from inventory
@@ -315,6 +374,60 @@
             document.execCommand('copy');
             showToast("UPI Link copied to clipboard!", 'success');
         };
+        
+        // --- Import/Export Functions ---
+
+        window.exportData = () => {
+            const exportObject = {
+                [STORAGE_KEY_INVENTORY]: getInventory(),
+                [STORAGE_KEY_PRICES]: getPersistedPrices(),
+                [STORAGE_KEY_SALES]: getSales()
+            };
+
+            const dataStr = JSON.stringify(exportObject, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileName = `dryfruit_manager_export_${new Date().toISOString().slice(0, 10)}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileName);
+            linkElement.click();
+
+            showToast("Data exported successfully!", 'success');
+        };
+
+        window.importData = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // Basic validation: Check if mandatory keys exist
+                    if (!importedData[STORAGE_KEY_INVENTORY] || !importedData[STORAGE_KEY_PRICES] || !importedData[STORAGE_KEY_SALES]) {
+                        throw new Error("Invalid import file format. Missing Inventory, Price, or Sales keys.");
+                    }
+
+                    // Store data and reload
+                    localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(importedData[STORAGE_KEY_INVENTORY]));
+                    localStorage.setItem(STORAGE_KEY_PRICES, JSON.stringify(importedData[STORAGE_KEY_PRICES]));
+                    localStorage.setItem(STORAGE_KEY_SALES, JSON.stringify(importedData[STORAGE_KEY_SALES]));
+
+                    showToast("Data imported successfully! Reloading app...", 'success');
+                    // Reload the window to re-initialize the app state with new data
+                    setTimeout(() => window.location.reload(), 1500); 
+
+                } catch (error) {
+                    console.error("Import failed:", error);
+                    showToast(`Import failed: ${error.message || 'Check console for details.'}`, 'error');
+                }
+            };
+            reader.readAsText(file);
+        };
+
 
         // --- Rendering Functions ---
 
@@ -336,6 +449,8 @@
                 contentEl.innerHTML = renderInventoryTab();
             } else if (appState.currentView === 'Reports') {
                 contentEl.innerHTML = renderReportsTab();
+            } else if (appState.currentView === 'Settings') {
+                contentEl.innerHTML = renderSettingsTab();
             }
         }
         
@@ -413,28 +528,41 @@
                 const isZero = stock === 0;
                 
                 return `
-                    <div class="product-card flex items-center justify-between p-4">
-                        <div class="flex-grow">
-                            <span class="text-lg font-medium">${product.name}</span>
-                            <p class="text-gray-400 text-sm">₹${product.price} per ${product.weight}</p>
-                            <p class="text-md mt-1">
-                                Stock: <span class="font-bold ${isZero ? 'text-red-500' : isLow ? 'text-yellow-500' : 'text-green-500'}">${stock}</span>
-                            </p>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="updateStock('${product.id}', -1)" class="btn-control p-2 w-8 h-8 rounded-full text-lg">-</button>
-                            <input type="number" id="inventory-input-${product.id}" value="${stock}" 
-                                   onchange="setStockFromInput('${product.id}')" 
-                                   class="input-stock w-16 text-center focus:ring-teal-500 focus:border-teal-500">
-                            <button onclick="updateStock('${product.id}', 1)" class="btn-control p-2 w-8 h-8 rounded-full text-lg">+</button>
+                    <div class="product-card p-4">
+                        <div class="inventory-card-content">
+                            <div class="flex-grow mb-4 md:mb-0">
+                                <span class="text-lg font-medium">${product.name}</span>
+                                <p class="text-gray-400 text-sm">${product.weight} | Current Price: ₹<span class="font-bold text-teal-300">${product.price}</span></p>
+                                <p class="text-md mt-1">
+                                    Stock: <span class="font-bold ${isZero ? 'text-red-500' : isLow ? 'text-yellow-500' : 'text-green-500'}">${stock}</span>
+                                </p>
+                            </div>
+                            
+                            <!-- Price Control -->
+                            <div class="inventory-control-group space-x-4 mb-4 md:mb-0 md:mr-6">
+                                <span class="text-sm text-gray-400 whitespace-nowrap">Price (₹):</span>
+                                <input type="number" id="price-input-${product.id}" value="${product.price}" 
+                                    onchange="setPriceFromInput('${product.id}')" 
+                                    class="input-stock w-20 text-center focus:ring-teal-500 focus:border-teal-500">
+                            </div>
+
+                            <!-- Stock Control -->
+                            <div class="inventory-control-group space-x-2">
+                                <span class="text-sm text-gray-400 whitespace-nowrap">Stock:</span>
+                                <button onclick="updateStock('${product.id}', -1)" class="btn-control p-2 w-8 h-8 rounded-full text-lg">-</button>
+                                <input type="number" id="inventory-input-${product.id}" value="${stock}" 
+                                    onchange="setStockFromInput('${product.id}')" 
+                                    class="input-stock w-16 text-center focus:ring-teal-500 focus:border-teal-500">
+                                <button onclick="updateStock('${product.id}', 1)" class="btn-control p-2 w-8 h-8 rounded-full text-lg">+</button>
+                            </div>
                         </div>
                     </div>
                 `;
             }).join('');
 
             return `
-                <h2 class="text-xl font-bold mb-4">Current Stock Levels</h2>
-                <p class="text-gray-400 mb-6">Use the controls to manually adjust inventory.</p>
+                <h2 class="text-xl font-bold mb-4">Current Stock & Pricing</h2>
+                <p class="text-gray-400 mb-6">Update the price or stock for each item below.</p>
                 <div class="space-y-4">
                     ${inventoryList}
                 </div>
@@ -446,7 +574,7 @@
 
             const salesList = appState.sales.map(sale => {
                 const date = new Date(sale.timestamp).toLocaleString();
-                const itemsSummary = sale.items.map(i => `${i.name} (${i.quantity})`).join(', ');
+                const itemsSummary = sale.items.map(i => `${i.name} (${i.quantity} @ ₹${i.price})`).join(', ');
 
                 return `
                     <div class="bg-gray-700 p-4 rounded-lg shadow-inner">
@@ -469,6 +597,34 @@
                 <h3 class="text-lg font-semibold mb-3">Transaction History (${appState.sales.length} Sales)</h3>
                 <div class="space-y-3">
                     ${appState.sales.length > 0 ? salesList : '<p class="text-gray-400 italic">No sales recorded yet.</p>'}
+                </div>
+            `;
+        }
+        
+        function renderSettingsTab() {
+            return `
+                <h2 class="text-xl font-bold mb-6">Data Management & Settings</h2>
+                
+                <!-- Export Section -->
+                <div class="p-6 bg-gray-800 rounded-xl shadow-md mb-8">
+                    <h3 class="text-lg font-semibold mb-3 text-white">Export Data (Backup)</h3>
+                    <p class="text-sm text-gray-400 mb-4">Download a JSON file containing all your Inventory, Prices, and Sales data.</p>
+                    <button onclick="exportData()" class="w-full bg-indigo-600 text-white text-center font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors shadow-lg block">
+                        Download Full App State
+                    </button>
+                </div>
+
+                <!-- Import Section -->
+                <div class="p-6 bg-gray-800 rounded-xl shadow-md">
+                    <h3 class="text-lg font-semibold mb-3 text-white">Import Data (Restore)</h3>
+                    <p class="text-sm text-red-400 font-medium mb-4">WARNING: Importing data will overwrite ALL current Inventory, Prices, and Sales records!</p>
+                    <input type="file" id="import-file" accept=".json" onchange="importData(event)" 
+                        class="w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4
+                               file:rounded-lg file:border-0
+                               file:text-sm file:font-semibold
+                               file:bg-teal-500 file:text-white
+                               hover:file:bg-teal-600
+                               cursor-pointer">
                 </div>
             `;
         }
@@ -532,6 +688,14 @@
 
         // Initial setup on load
         window.onload = () => {
+            const persistedPrices = getPersistedPrices();
+            
+            // Initialize 'products' array using default data, overriding with persisted prices
+            products = DEFAULT_PRODUCT_DATA.map(p => ({
+                ...p,
+                price: persistedPrices[p.id] !== undefined ? persistedPrices[p.id] : p.defaultPrice
+            }));
+            
             appState.inventory = getInventory();
             appState.sales = getSales();
             
