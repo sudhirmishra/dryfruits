@@ -3,26 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dry Fruit Calculator</title>
-    <!-- Web App Manifest -->
-    <link rel="manifest" href="manifest.json">
+    <title>Dry Fruit Inventory & Sales App</title>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1a202c">
-    <!-- End of Web App Manifest -->
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #1a202c; /* Dark background */
             color: #e2e8f0; /* Light text */
+            min-height: 100vh;
         }
         .container {
             max-width: 640px;
             margin: auto;
-            padding: 1.5rem;
+            padding: 0 1.5rem 1.5rem;
         }
         .product-card {
             display: flex;
@@ -33,254 +36,516 @@
             margin-bottom: 0.75rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        .product-info {
-            display: flex;
-            align-items: center;
-            flex-grow: 1;
-        }
-        .product-info img {
-            border-radius: 0.5rem;
-        }
         .product-details {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            flex-grow: 1;
             margin-left: 1rem;
         }
-        .quantity-control input {
-            background-color: #4a5568;
-            border: 1px solid #718096;
-            color: #e2e8f0;
-            text-align: center;
-            width: 3rem;
-            border-radius: 0.5rem;
-            padding: 0.25rem;
-            -moz-appearance: textfield;
-        }
-        .quantity-control input::-webkit-outer-spin-button,
-        .quantity-control input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        .quantity-btn {
-            background-color: #4a5568;
+        .btn-control {
+            background-color: #374151; /* Subtle Gray */
             color: white;
-            width: 2rem;
-            height: 2rem;
-            border-radius: 9999px;
+            width: 100%;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 2rem;
             line-height: 1;
             transition: background-color 0.2s ease-in-out;
         }
-        .quantity-btn:hover {
-            background-color: #6b7280;
+        .btn-control:hover {
+            background-color: #4b5563;
         }
-        .copy-button {
-            background-color: #38b2ac;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            font-weight: 500;
-            transition: background-color 0.2s ease-in-out;
+        .tab-button.active {
+            border-bottom: 3px solid #38b2ac; /* Teal highlight */
+            color: #38b2ac;
         }
-        .copy-button:hover {
-            background-color: #319795;
+        .input-stock {
+            background-color: #4a5568;
+            border: 1px solid #718096;
+            color: #e2e8f0;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
         }
-        #link-container {
-            transition: opacity 0.5s ease-in-out;
+        .toast {
+            visibility: hidden;
+            opacity: 0;
         }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200">
-    <div class="container p-6 md:p-12">
-        <h1 class="text-3xl font-bold text-center mb-8 text-white">Dry Fruit Totalizer</h1>
-        <p class="text-center text-gray-400 mb-6">Select the quantity for each item to compute your total.</p>
-
-        <div id="product-list" class="space-y-4">
-            <!-- Product cards will be generated here by JavaScript -->
-        </div>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center pt-8 mb-4 text-white">Dry Fruit Manager</h1>
         
-        <div class="mt-8 p-6 bg-gray-800 rounded-xl shadow-md">
-            <div class="flex justify-between items-center mb-4">
-                <span class="text-xl font-semibold">Total:</span>
-                <span id="total-amount" class="text-3xl font-bold text-teal-400">₹0</span>
-            </div>
-            
-            <a id="whatsapp-link" href="#" target="_blank" class="w-full bg-teal-600 text-white text-center font-bold py-3 px-6 rounded-lg hover:bg-teal-700 transition-colors shadow-lg block">
-                Share over WhatsApp
-            </a>
-            <p id="share-message" class="text-xs text-center text-green-400 mt-2 hidden"></p>
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-gray-700 sticky top-0 bg-gray-900 z-10">
+            <button class="tab-button flex-1 py-3 text-lg font-medium transition-colors hover:text-teal-400 active" 
+                    onclick="switchView('Order')">Order</button>
+            <button class="tab-button flex-1 py-3 text-lg font-medium transition-colors hover:text-teal-400" 
+                    onclick="switchView('Inventory')">Inventory</button>
+            <button class="tab-button flex-1 py-3 text-lg font-medium transition-colors hover:text-teal-400" 
+                    onclick="switchView('Reports')">Reports</button>
         </div>
 
-        <div id="link-container" class="mt-6 p-6 bg-gray-800 rounded-xl shadow-md hidden opacity-0">
-            <h2 class="text-xl font-semibold mt-6 mb-3">Scan to Pay</h2>
-            <div id="qr-code-container" class="p-2 bg-white rounded-lg"></div>
-
-            <h2 class="text-xl font-semibold mb-3 mt-6">Your Payment Link</h2>
-            <div class="flex items-center space-x-2 bg-gray-700 p-3 rounded-lg">
-                <input type="text" id="upi-link-input" readonly class="flex-grow bg-transparent border-none outline-none text-sm text-gray-300 truncate cursor-pointer">
-                <button onclick="copyLink()" class="copy-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v10a2 2 0 002 2h2m-2 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-2 2V5m0 0a2 2 0 10-4 0m4 0a2 2 0 11-4 0M8 5a2 2 0 11-4 0m4 0a2 2 0 10-4 0m-2 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
-                    </svg>
-                    Copy Link
-                </button>
-            </div>
-            <p id="copy-message" class="text-xs text-center text-green-400 mt-2 hidden">Link copied to clipboard!</p>
+        <div id="app-content" class="mt-6">
+            <!-- Content will be rendered here -->
         </div>
+
+        <div id="toast" class="toast"></div>
     </div>
 
     <script>
+        // --- PWA Setup and LocalStorage Keys ---
+        const STORAGE_KEY_INVENTORY = 'dryFruitInventory';
+        const STORAGE_KEY_SALES = 'dryFruitSales';
+
+        // --- Global Product Data ---
         const products = [
-            { name: 'Almonds', price: 250, weight: '250 gms', image: 'https://placehold.co/80x80/2f4f4f/ffffff?text=Almonds' },
-            { name: 'Cashews', price: 250, weight: '250 gms', image: 'https://placehold.co/80x80/6b46c1/ffffff?text=Cashews' },
-            { name: 'Pistachios', price: 400, weight: '250 gms', image: 'https://placehold.co/80x80/4a5568/ffffff?text=Pistachios' },
-            { name: 'Walnuts', price: 350, weight: '250 gms', image: 'https://placehold.co/80x80/5a67d8/ffffff?text=Walnuts' },
-            { name: 'Makhana', price: 380, weight: '250 gms', image: 'https://placehold.co/80x80/dd6b20/ffffff?text=Makhana' },
-            { name: 'Anjeer', price: 450, weight: '250 gms', image: 'https://placehold.co/80x80/d69e2e/ffffff?text=Anjeer' },
-            { name: 'Pumpkin Seeds', price: 150, weight: '250 gms', image: 'https://placehold.co/80x80/63b3ed/ffffff?text=Seeds' },
+            { id: 'almonds', name: 'Almonds', price: 250, weight: '250 gms', image: 'https://placehold.co/80x80/2f4f4f/ffffff?text=Almonds' },
+            { id: 'cashews', name: 'Cashews', price: 250, weight: '250 gms', image: 'https://placehold.co/80x80/6b46c1/ffffff?text=Cashews' },
+            { id: 'pistachios', name: 'Pistachios', price: 400, weight: '250 gms', image: 'https://placehold.co/80x80/4a5568/ffffff?text=Pistachios' },
+            { id: 'walnuts', name: 'Walnuts', price: 350, weight: '250 gms', image: 'https://placehold.co/80x80/5a67d8/ffffff?text=Walnuts' },
+            { id: 'makhana', name: 'Makhana', price: 380, weight: '250 gms', image: 'https://placehold.co/80x80/dd6b20/ffffff?text=Makhana' },
+            { id: 'anjeer', name: 'Anjeer', price: 450, weight: '250 gms', image: 'https://placehold.co/80x80/d69e2e/ffffff?text=Anjeer' },
+            { id: 'pumpkin_seeds', name: 'Pumpkin Seeds', price: 150, weight: '250 gms', image: 'https://placehold.co/80x80/63b3ed/ffffff?text=Seeds' },
         ];
 
-        const productListEl = document.getElementById('product-list');
-        const totalAmountEl = document.getElementById('total-amount');
-        const linkContainerEl = document.getElementById('link-container');
-        const upiLinkInput = document.getElementById('upi-link-input');
-        const copyMessageEl = document.getElementById('copy-message');
-        const shareMessageEl = document.getElementById('share-message');
-        const whatsappLinkEl = document.getElementById('whatsapp-link');
-        const qrCodeContainerEl = document.getElementById('qr-code-container');
+        // --- Application State ---
+        let appState = {
+            currentView: 'Order',
+            inventory: {},
+            sales: [],
+            orderQuantities: {}, 
+            totalAmount: 0,
+            upiLink: '',
+        };
+        
+        // --- LocalStorage Functions (No Server State) ---
+        function getInventory() {
+            try {
+                const inventory = JSON.parse(localStorage.getItem(STORAGE_KEY_INVENTORY) || '{}');
+                // Ensure all products are initialized, defaulting to 0
+                products.forEach(p => {
+                    if (inventory[p.id] === undefined) inventory[p.id] = 0;
+                });
+                return inventory;
+            } catch { return {}; }
+        }
 
-        // Dynamically create product cards
-        products.forEach((product, index) => {
-            const cardHtml = `
-                <div class="product-card">
-                    <div onclick="decreaseQuantity(${index})" class="flex-1 flex justify-center items-center bg-gray-700 hover:bg-gray-600 transition-colors rounded-lg mr-2 cursor-pointer p-4">
-                        <span class="text-2xl font-bold">-</span>
-                    </div>
-                    <div class="flex-grow flex items-center p-4">
-                        <img src="${product.image}" alt="${product.name}" class="w-16 h-16 object-cover rounded-lg">
-                        <div class="product-details flex-grow ml-4">
-                            <span class="text-lg font-medium">${product.name}</span>
-                            <p class="text-gray-400 text-sm">₹${product.price} (${product.weight})</p>
-                            <div class="text-sm mt-1">Quantity: <span id="qty-${index}">0</span></div>
+        function saveInventory(inventory) {
+            localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(inventory));
+        }
+
+        function getSales() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY_SALES) || '[]');
+            } catch { return []; }
+        }
+
+        function saveSales(sales) {
+            localStorage.setItem(STORAGE_KEY_SALES, JSON.stringify(sales));
+        }
+
+        // --- Core Logic ---
+
+        function updateOrderState() {
+            let total = 0;
+            let hasItems = false;
+            
+            products.forEach(product => {
+                const quantity = appState.orderQuantities[product.id] || 0;
+                total += quantity * product.price;
+                if (quantity > 0) hasItems = true;
+            });
+
+            appState.totalAmount = total;
+            appState.upiLink = `upi://pay?pa=madhu3gupta@okicici&pn=Akansha%20Gupta&am=${total}&tn=Akansha%20Gutpa&cu=INR`;
+            
+            // Only show payment/share info if there are items
+            const linkContainerEl = document.getElementById('link-container');
+            if (linkContainerEl) {
+                if (hasItems) {
+                    linkContainerEl.classList.remove('hidden', 'opacity-0');
+                    setTimeout(() => linkContainerEl.classList.add('opacity-100'), 10);
+                } else {
+                    linkContainerEl.classList.remove('opacity-100');
+                    setTimeout(() => linkContainerEl.classList.add('hidden'), 500);
+                }
+            }
+            
+            updateUpiAndWhatsappLinks(total);
+        }
+
+        function updateUpiAndWhatsappLinks(total) {
+            const upiLinkInput = document.getElementById('upi-link-input');
+            const whatsappLinkEl = document.getElementById('whatsapp-link');
+
+            if (upiLinkInput) upiLinkInput.value = appState.upiLink;
+            if (whatsappLinkEl) {
+                // Generate WhatsApp summary
+                let summaryText = 'My Dry Fruit Order\n\n';
+                let hasItems = false;
+                
+                products.forEach(product => {
+                    const quantity = appState.orderQuantities[product.id] || 0;
+                    if (quantity > 0) {
+                        hasItems = true;
+                        const itemTotal = quantity * product.price;
+                        summaryText += `${product.name} x ${quantity}: ₹${itemTotal}\n`;
+                    }
+                });
+
+                if (hasItems) {
+                    summaryText += `\n---\nGrand Total: ₹${total}\n\n`;
+                    summaryText += `UPI Payment Link: ${appState.upiLink}`;
+                    const encodedText = encodeURIComponent(summaryText);
+                    
+                    whatsappLinkEl.href = `https://wa.me/?text=${encodedText}`;
+                    whatsappLinkEl.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    whatsappLinkEl.href = '#';
+                    whatsappLinkEl.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            }
+
+            if (document.getElementById('total-amount')) {
+                document.getElementById('total-amount').textContent = `₹${total}`;
+            }
+
+            generateQRCode(appState.upiLink);
+        }
+
+        // --- UI Interactions (Public) ---
+
+        window.increaseQuantity = (productId) => {
+            const currentOrder = appState.orderQuantities[productId] || 0;
+            const currentStock = appState.inventory[productId] || 0;
+            
+            if (currentStock === 0 || currentOrder >= currentStock) {
+                showToast(`Cannot add ${products.find(p => p.id === productId).name}. Inventory is 0 or limit reached!`, 'error');
+                return;
+            }
+            appState.orderQuantities[productId] = currentOrder + 1;
+            updateOrderState();
+            renderApp();
+        };
+
+        window.decreaseQuantity = (productId) => {
+            const currentOrder = appState.orderQuantities[productId] || 0;
+            if (currentOrder > 0) {
+                appState.orderQuantities[productId] = currentOrder - 1;
+                updateOrderState();
+                renderApp();
+            }
+        };
+
+        window.updateStock = (productId, delta) => {
+            const currentStock = appState.inventory[productId] || 0;
+            const newStock = Math.max(0, currentStock + delta);
+            
+            appState.inventory[productId] = newStock;
+            saveInventory(appState.inventory);
+            showToast(`Stock for ${products.find(p => p.id === productId).name} updated to ${newStock}.`, 'success');
+            renderApp();
+        };
+
+        window.setStockFromInput = (productId) => {
+             const input = document.getElementById(`inventory-input-${productId}`);
+             const newStock = parseInt(input.value) || 0;
+             appState.inventory[productId] = Math.max(0, newStock);
+             saveInventory(appState.inventory);
+             showToast(`Stock for ${products.find(p => p.id === productId).name} set to ${appState.inventory[productId]}.`, 'success');
+             renderApp();
+        };
+
+        window.recordSale = () => {
+            if (appState.totalAmount === 0) {
+                showToast("Order is empty. Cannot record sale.", 'error');
+                return;
+            }
+
+            const saleItems = [];
+            let saleTotal = 0;
+            let updatedInventory = { ...appState.inventory };
+
+            products.forEach(product => {
+                const quantitySold = appState.orderQuantities[product.id] || 0;
+                if (quantitySold > 0) {
+                    saleItems.push({
+                        id: product.id,
+                        name: product.name,
+                        quantity: quantitySold,
+                        price: product.price
+                    });
+                    saleTotal += quantitySold * product.price;
+                    // Deduct from inventory
+                    updatedInventory[product.id] = updatedInventory[product.id] - quantitySold;
+                }
+            });
+
+            // 1. Save Sale Record
+            const sales = getSales();
+            sales.unshift({ // Add to the beginning for easier display
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                items: saleItems,
+                total: saleTotal,
+            });
+            saveSales(sales);
+            appState.sales = sales;
+
+            // 2. Update Inventory
+            saveInventory(updatedInventory);
+            appState.inventory = updatedInventory;
+
+            // 3. Reset Order
+            products.forEach(p => appState.orderQuantities[p.id] = 0);
+            appState.totalAmount = 0;
+            updateOrderState();
+            
+            showToast(`Sale of ₹${saleTotal} recorded successfully! Inventory updated.`, 'success');
+            renderApp();
+        };
+
+        window.copyLink = () => {
+            const upiLinkInput = document.getElementById('upi-link-input');
+            upiLinkInput.select();
+            document.execCommand('copy');
+            showToast("UPI Link copied to clipboard!", 'success');
+        };
+
+        // --- Rendering Functions ---
+
+        function renderApp() {
+            // Update Tab Highlight
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent === appState.currentView) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Render content based on current view
+            const contentEl = document.getElementById('app-content');
+            if (appState.currentView === 'Order') {
+                contentEl.innerHTML = renderOrderTab();
+                updateOrderState(); // Re-run after rendering
+            } else if (appState.currentView === 'Inventory') {
+                contentEl.innerHTML = renderInventoryTab();
+            } else if (appState.currentView === 'Reports') {
+                contentEl.innerHTML = renderReportsTab();
+            }
+        }
+        
+        function renderOrderTab() {
+            const productCards = products.map(product => {
+                const quantity = appState.orderQuantities[product.id] || 0;
+                const stock = appState.inventory[product.id] || 0;
+                const isOutOfStock = stock === 0;
+
+                return `
+                    <div class="product-card ${isOutOfStock ? 'opacity-50' : ''}">
+                        <button onclick="decreaseQuantity('${product.id}')" class="btn-control w-1/4 rounded-tl-lg rounded-bl-lg mr-2 p-4 text-3xl font-bold border-r border-gray-600 focus:outline-none">
+                            <span class="text-gray-200">-</span>
+                        </button>
+                        <div class="flex-grow flex items-center p-2">
+                            <img src="${product.image}" alt="${product.name}" class="w-12 h-12 object-cover rounded-lg hidden sm:block">
+                            <div class="product-details ml-2 sm:ml-4">
+                                <span class="text-md font-medium">${product.name}</span>
+                                <p class="text-gray-400 text-xs">₹${product.price} (${product.weight})</p>
+                                <div class="text-sm mt-1">
+                                    <span class="text-teal-400 font-bold" id="order-qty-${product.id}">${quantity}</span> ordered | Stock: <span class="${isOutOfStock ? 'text-red-400 font-bold' : 'text-green-400'}">${stock}</span>
+                                </div>
+                            </div>
                         </div>
+                        <button onclick="increaseQuantity('${product.id}')" class="btn-control w-1/4 rounded-tr-lg rounded-br-lg ml-2 p-4 text-3xl font-bold border-l border-gray-600 focus:outline-none">
+                            <span class="text-gray-200">+</span>
+                        </button>
                     </div>
-                    <div onclick="increaseQuantity(${index})" class="flex-1 flex justify-center items-center bg-gray-700 hover:bg-gray-600 transition-colors rounded-lg ml-2 cursor-pointer p-4">
-                        <span class="text-2xl font-bold">+</span>
+                `;
+            }).join('');
+
+            return `
+                <p class="text-center text-gray-400 mb-6">Select the quantity for each item. Stock is checked automatically.</p>
+                <div id="product-list" class="space-y-4">
+                    ${productCards}
+                </div>
+                
+                <div class="mt-8 p-6 bg-gray-800 rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-xl font-semibold">Total:</span>
+                        <span id="total-amount" class="text-3xl font-bold text-teal-400">₹0</span>
+                    </div>
+                    
+                    <button onclick="recordSale()" class="w-full bg-yellow-600 text-white text-center font-bold py-3 px-6 rounded-lg hover:bg-yellow-700 transition-colors shadow-lg block mb-4">
+                        Record Sale & Deduct Stock
+                    </button>
+
+                    <a id="whatsapp-link" href="#" target="_blank" class="w-full bg-teal-600 text-white text-center font-bold py-3 px-6 rounded-lg hover:bg-teal-700 transition-colors shadow-lg block">
+                        Share over WhatsApp
+                    </a>
+                </div>
+
+                <div id="link-container" class="mt-6 p-6 bg-gray-800 rounded-xl shadow-md hidden opacity-0">
+                    <h2 class="text-xl font-semibold mt-6 mb-3">Scan to Pay</h2>
+                    <div id="qr-code-container" class="p-2 bg-white rounded-lg"></div>
+
+                    <h2 class="text-xl font-semibold mb-3 mt-6">Your Payment Link</h2>
+                    <div class="flex items-center space-x-2 bg-gray-700 p-3 rounded-lg">
+                        <input type="text" id="upi-link-input" readonly class="flex-grow bg-transparent border-none outline-none text-sm text-gray-300 truncate cursor-pointer">
+                        <button onclick="copyLink()" class="copy-button">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v10a2 2 0 002 2h2m-2 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-2 2V5m0 0a2 2 0 10-4 0m4 0a2 2 0 11-4 0M8 5a2 2 0 11-4 0m4 0a2 2 0 10-4 0m-2 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+                            </svg>
+                            Copy Link
+                        </button>
                     </div>
                 </div>
             `;
-            productListEl.innerHTML += cardHtml;
-        });
-
-        // Function to increase quantity
-        function increaseQuantity(index) {
-            const quantitySpan = document.getElementById(`qty-${index}`);
-            let currentValue = parseInt(quantitySpan.textContent);
-            quantitySpan.textContent = currentValue + 1;
-            calculateTotal();
-            updateWhatsAppLink();
         }
+
+        function renderInventoryTab() {
+            const inventoryList = products.map(product => {
+                const stock = appState.inventory[product.id] || 0;
+                const isLow = stock < 5 && stock > 0;
+                const isZero = stock === 0;
+                
+                return `
+                    <div class="product-card flex items-center justify-between p-4">
+                        <div class="flex-grow">
+                            <span class="text-lg font-medium">${product.name}</span>
+                            <p class="text-gray-400 text-sm">₹${product.price} per ${product.weight}</p>
+                            <p class="text-md mt-1">
+                                Stock: <span class="font-bold ${isZero ? 'text-red-500' : isLow ? 'text-yellow-500' : 'text-green-500'}">${stock}</span>
+                            </p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="updateStock('${product.id}', -1)" class="btn-control p-2 w-8 h-8 rounded-full text-lg">-</button>
+                            <input type="number" id="inventory-input-${product.id}" value="${stock}" 
+                                   onchange="setStockFromInput('${product.id}')" 
+                                   class="input-stock w-16 text-center focus:ring-teal-500 focus:border-teal-500">
+                            <button onclick="updateStock('${product.id}', 1)" class="btn-control p-2 w-8 h-8 rounded-full text-lg">+</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <h2 class="text-xl font-bold mb-4">Current Stock Levels</h2>
+                <p class="text-gray-400 mb-6">Use the controls to manually adjust inventory.</p>
+                <div class="space-y-4">
+                    ${inventoryList}
+                </div>
+            `;
+        }
+
+        function renderReportsTab() {
+            const totalRevenue = appState.sales.reduce((sum, sale) => sum + sale.total, 0);
+
+            const salesList = appState.sales.map(sale => {
+                const date = new Date(sale.timestamp).toLocaleString();
+                const itemsSummary = sale.items.map(i => `${i.name} (${i.quantity})`).join(', ');
+
+                return `
+                    <div class="bg-gray-700 p-4 rounded-lg shadow-inner">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-lg font-bold text-teal-400">₹${sale.total}</span>
+                            <span class="text-xs text-gray-400">${date}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">Items: ${itemsSummary}</p>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <h2 class="text-xl font-bold mb-4">Sales Records</h2>
+                <div class="bg-gray-800 p-4 rounded-xl shadow-md mb-6">
+                    <p class="text-sm font-semibold">Total Revenue Recorded</p>
+                    <p class="text-4xl font-extrabold text-teal-400">₹${totalRevenue}</p>
+                </div>
+                
+                <h3 class="text-lg font-semibold mb-3">Transaction History (${appState.sales.length} Sales)</h3>
+                <div class="space-y-3">
+                    ${appState.sales.length > 0 ? salesList : '<p class="text-gray-400 italic">No sales recorded yet.</p>'}
+                </div>
+            `;
+        }
+
+        // --- Utility and Initialization ---
         
-        // Function to decrease quantity
-        function decreaseQuantity(index) {
-            const quantitySpan = document.getElementById(`qty-${index}`);
-            let currentValue = parseInt(quantitySpan.textContent);
-            if (currentValue > 0) {
-                quantitySpan.textContent = currentValue - 1;
-                calculateTotal();
-                updateWhatsAppLink();
+        function switchView(viewName) {
+            appState.currentView = viewName;
+            renderApp();
+        }
+
+        function showToast(message, type = 'info') {
+            const toastEl = document.getElementById('toast');
+            toastEl.textContent = message;
+            toastEl.className = 'fixed bottom-5 left-1/2 transform -translate-x-1/2 py-2 px-4 rounded-lg text-sm transition-opacity duration-300 z-50';
+            
+            if (type === 'success') {
+                toastEl.classList.add('bg-green-600', 'text-white');
+            } else if (type === 'error') {
+                toastEl.classList.add('bg-red-600', 'text-white');
+            } else {
+                toastEl.classList.add('bg-gray-600', 'text-white');
             }
-        }
 
-        // Main function to calculate the total and generate the link
-        function calculateTotal() {
-            let total = 0;
-            products.forEach((product, index) => {
-                const quantitySpan = document.getElementById(`qty-${index}`);
-                const quantity = parseInt(quantitySpan.textContent) || 0;
-                total += quantity * product.price;
-            });
+            toastEl.style.visibility = 'visible';
+            toastEl.classList.remove('opacity-0');
+            toastEl.classList.add('opacity-100');
 
-            // Update the total amount displayed
-            totalAmountEl.textContent = `₹${total}`;
-
-            // Generate the UPI link with the total amount
-            const upiLink = `upi://pay?pa=madhu3gupta@okicici&pn=Akansha%20Gupta&am=${total}&tn=Akansha%20Gutpa&cu=INR`;
-            upiLinkInput.value = upiLink;
-
-            // Generate the QR code
-            generateQRCode(upiLink);
-
-            // Show the link container
-            linkContainerEl.classList.remove('hidden');
             setTimeout(() => {
-                linkContainerEl.classList.add('opacity-100');
-            }, 10);
+                toastEl.classList.remove('opacity-100');
+                toastEl.classList.add('opacity-0');
+                setTimeout(() => {
+                    toastEl.style.visibility = 'hidden';
+                }, 300);
+            }, 3000);
         }
 
-        // Function to generate the QR code
         function generateQRCode(data) {
+            const qrCodeContainerEl = document.getElementById('qr-code-container');
+            if (!qrCodeContainerEl) return;
+
             // Clear any previous QR code
             qrCodeContainerEl.innerHTML = '';
             
             // Get the container width and use it for the QR code size
-            const size = qrCodeContainerEl.offsetWidth;
+            // We use a small factor (0.95) to ensure it fits nicely within the padding
+            const size = qrCodeContainerEl.offsetWidth * 0.95; 
             
-            // Generate the new QR code
-            new QRCode(qrCodeContainerEl, {
-                text: data,
-                width: size,
-                height: size,
-                colorDark : "#1a202c",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
-        }
-
-        // Function to copy the link to the clipboard
-        function copyLink() {
-            upiLinkInput.select();
-            document.execCommand('copy');
-            copyMessageEl.classList.remove('hidden');
-            setTimeout(() => {
-                copyMessageEl.classList.add('hidden');
-            }, 3000);
-        }
-
-        // Function to generate and set the WhatsApp share link
-        function updateWhatsAppLink() {
-            let summaryText = 'My Dry Fruit Order\n\n';
-            let total = 0;
-            let hasItems = false;
-            products.forEach((product, index) => {
-                const quantitySpan = document.getElementById(`qty-${index}`);
-                const quantity = parseInt(quantitySpan.textContent) || 0;
-
-                if (quantity > 0) {
-                    hasItems = true;
-                    const itemTotal = quantity * product.price;
-                    total += itemTotal;
-                    summaryText += `${product.name} x ${quantity}: ₹${itemTotal}\n`;
-                }
-            });
-            
-            if (hasItems) {
-                summaryText += `\n---\nGrand Total: ₹${total}\n\n`;
-                summaryText += `UPI Payment Link: ${upiLinkInput.value}`;
-
-                const encodedText = encodeURIComponent(summaryText);
-                whatsappLinkEl.href = `https://wa.me/?text=${encodedText}`;
-                whatsappLinkEl.classList.remove('opacity-50', 'cursor-not-allowed');
-            } else {
-                whatsappLinkEl.href = '#';
-                whatsappLinkEl.classList.add('opacity-50', 'cursor-not-allowed');
+            // Only generate if there's a total amount greater than 0
+            if (appState.totalAmount > 0) {
+                new QRCode(qrCodeContainerEl, {
+                    text: data,
+                    width: size,
+                    height: size,
+                    colorDark : "#1a202c",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
             }
         }
 
-        // Initial calculation and link update on page load
-        calculateTotal();
-        updateWhatsAppLink();
+        // Initial setup on load
+        window.onload = () => {
+            appState.inventory = getInventory();
+            appState.sales = getSales();
+            
+            // Initialize order quantities to 0
+            products.forEach(p => appState.orderQuantities[p.id] = 0);
+            
+            renderApp();
+            // Attach event listener for QR code resizing (e.g., screen rotation/resize)
+            window.addEventListener('resize', () => {
+                if (appState.currentView === 'Order') {
+                    generateQRCode(appState.upiLink);
+                }
+            });
+        };
     </script>
 </body>
 </html>
